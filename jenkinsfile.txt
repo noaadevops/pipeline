@@ -7,7 +7,7 @@ pipeline {
         string(name: 'SonarHostUrl', defaultValue: 'http://192.168.201.13:9000', description: 'SonarQube server URL')
         //string(name: 'SlackChannel', defaultValue: '#jenkins-build-sonar', description: 'Slack channel to send notifications')
         //string(name: 'SlackTokenCredentialId', defaultValue: 'SLACK-TOKEN', description: 'Slack token credential ID')
-        string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/Noah-linux/ci.git', description: 'Git repository URL')
+        string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/noaadevops/pipeline.git', description: 'Git repository URL')
         string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch name')
     }
 
