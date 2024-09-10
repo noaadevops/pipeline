@@ -21,8 +21,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout([$class: 'GitSCM', 
-                          branches: [[name: '*/main']],
-                          userRemoteConfigs: [[url: 'https://github.com/noaadevops/ci.git', credentialsId: 'Git-pass']], //SWITCHED
+                          branches: [[name: "*/${params.GIT_BRANCH}"]],
+                          userRemoteConfigs: [[url: 'https://github.com/noaadevops/pipeline.git', credentialsId: 'Git-pass']], //SWITCHED
                           extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'ci']]])
             }
         }
