@@ -96,6 +96,25 @@ stage('Publish Docker Image to DockerHub') {
                 }
             }
         }
+     stage('Docker Pull & Deploy') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
+                        // Stop any existing container on the same port
+                        sh """
+                        docker ps -q --filter "name=petclinic" | grep -q . && docker stop petclinic && docker rm petclinic || true
+                        """
+
+                        // Pull the Docker image and run the container
+                        echo "Pulling Docker image: ${registry}:${dockerTag} from DockerHub"
+                        sh """
+                        docker pull ${registry}:${dockerTag}
+                        docker run -d -p 8081:8081 --name petclinic ${registry}:${dockerTag}
+                        """
+                    }
+                }
+            }
+        }
     } // <-- This closing brace was missing, fixed now
 
     post {
