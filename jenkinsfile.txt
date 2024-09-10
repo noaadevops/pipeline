@@ -12,7 +12,7 @@ pipeline {
     }
 
     environment {
-        registry = "noaalinux/petclinic-java" // Docker image name
+        registry = "noaadevops/petclinic-java" // Docker image name
         registryCredential = 'Jenkins-Docker-Token' // Jenkins credential ID for DockerHub
         dockerTag = "${env.BUILD_NUMBER}" // Use build number as Docker tag
     }
@@ -23,7 +23,7 @@ pipeline {
                 // NEW UPDATE: Updated checkout configuration with correct URL and added credentials
                 checkout([$class: 'GitSCM', 
                           branches: [[name: '*/main']],
-                          userRemoteConfigs: [[url: 'https://github.com/Noah-linux/ci.git', credentialsId: 'Git-pass']], // NEW UPDATE
+                          userRemoteConfigs: [[url: 'https://github.com/noaadevops/ci.git', credentialsId: 'Git-pass']], // NEW UPDATE
                           extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'ci']]])
             }
         }
