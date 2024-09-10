@@ -12,7 +12,7 @@ pipeline {
     }
 
     environment {
-        registry = "noaalinux/petclinic-app" //SWITCHED: Docker image name
+        registry = "noaalinux/petclinic-java" //SWITCHED: Docker image name
         registryCredential = 'Jenkins-Docker-Token' // Jenkins credential ID for DockerHub
         dockerTag = "${env.BUILD_NUMBER}" // Use build number as Docker tag
     }
