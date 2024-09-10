@@ -18,7 +18,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout([$class: 'GitSCM', 
@@ -26,6 +25,8 @@ pipeline {
                           userRemoteConfigs: [[url: 'https://github.com/Noah-linux/ci.git']],
                           extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'ci']]])
             }
+        }
+
         stage('Checkout GitHub Repo') {
             steps {
                 script {
@@ -94,7 +95,7 @@ pipeline {
                 }
             }
         }
-    }
+    } // <-- This closing brace was missing
 
     post {
         success {
@@ -119,6 +120,3 @@ pipeline {
         }
     }
 }
-}
-
-
