@@ -5,16 +5,14 @@ pipeline {
         string(name: 'ProjectKey', defaultValue: 'petclinic', description: 'SonarQube project key')
         string(name: 'ProjectName', defaultValue: 'petclinic', description: 'SonarQube project name')
         string(name: 'SonarHostUrl', defaultValue: 'http://192.168.201.13:9000', description: 'SonarQube server URL')
-        //string(name: 'SlackChannel', defaultValue: '#jenkins-build-sonar', description: 'Slack channel to send notifications')
-        //string(name: 'SlackTokenCredentialId', defaultValue: 'SLACK-TOKEN', description: 'Slack token credential ID')
         string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/noaadevops/pipeline.git', description: 'Git repository URL')
         string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch name')
     }
 
     environment {
-        registry = "noaalinux/petclinic-java" //SWITCHED: Docker image name
-        registryCredential = 'Jenkins-Docker-Token' // Jenkins credential ID for DockerHub
-        dockerTag = "${env.BUILD_NUMBER}" // Use build number as Docker tag
+        registry = "noaalinux/petclinic-java"
+        registryCredential = 'Jenkins-Docker-Token'
+        dockerTag = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -22,7 +20,7 @@ pipeline {
             steps {
                 checkout([$class: 'GitSCM', 
                           branches: [[name: "*/${params.GIT_BRANCH}"]],
-                          userRemoteConfigs: [[url: 'https://github.com/noaadevops/pipeline.git', credentialsId: 'Git-pass']], //SWITCHED
+                          userRemoteConfigs: [[url: "${params.GIT_REPO_URL}", credentialsId: 'Git-pass']], //SWITCHED
                           extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'ci']]])
             }
         }
@@ -38,7 +36,7 @@ pipeline {
         stage('Compile Code') {
             steps {
                 dir('petclinic-app') {
-                    sh 'mvn compile' // Compile the code
+                    sh 'mvn compile'
                 }
             }
         }
@@ -46,7 +44,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('petclinic-app') {
-                    sh 'mvn test' // Run the tests
+                    sh 'mvn test'
                 }
             }
         }
@@ -54,17 +52,28 @@ pipeline {
         stage('Build Package') {
             steps {
                 dir('petclinic-app') {
-                    sh 'mvn -Dmaven.test.failure.ignore=true clean package' // Build the package
+                    sh 'mvn -Dmaven.test.failure.ignore=true clean package'
                 }
             }
         }
-  
-stage('Publish Docker Image to DockerHub') {
+
+        stage('Build Docker Image') {
+            steps {
+                dir('petclinic-app') {
+                    script {
+                        echo "Building Docker image: ${registry}:${dockerTag}"
+                        dockerImage = docker.build("${registry}:${dockerTag}") //CORRECTED: Build the Docker image and assign to dockerImage
+                    }
+                }
+            }
+        }
+
+        stage('Publish Docker Image to DockerHub') {
             steps {
                 script {
                     echo "Pushing Docker image: ${registry}:${dockerTag} to DockerHub"
                     docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
-                        dockerImage.push() // Push the Docker image to DockerHub
+                        dockerImage.push() //CORRECTED: Push the Docker image to DockerHub
                     }
                 }
             }
@@ -86,28 +95,12 @@ stage('Publish Docker Image to DockerHub') {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                dir('petclinic-app') {
-                    script {
-                        echo "Building Docker image: ${registry}:${dockerTag}"
-                        dockerImage = docker.build("${registry}:${dockerTag}") // Build the Docker image with the build number as the tag
-                    }
-                }
-            }
-        }
-     stage('Docker Pull & Deploy') {
+        stage('Docker Pull & Deploy') {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
-                        // Stop any existing container on the same port
                         sh """
                         docker ps -q --filter "name=petclinic" | grep -q . && docker stop petclinic && docker rm petclinic || true
-                        """
-
-                        // Pull the Docker image and run the container
-                        echo "Pulling Docker image: ${registry}:${dockerTag} from DockerHub"
-                        sh """
                         docker pull ${registry}:${dockerTag}
                         docker run -d -p 8081:8081 --name petclinic ${registry}:${dockerTag}
                         """
@@ -115,28 +108,18 @@ stage('Publish Docker Image to DockerHub') {
                 }
             }
         }
-    } // <-- This closing brace was missing, fixed now
+    }
 
     post {
         success {
             dir('petclinic-app') {
-                junit '**/target/surefire-reports/TEST-*.xml' // Archive JUnit test results
-                archiveArtifacts 'target/*.jar' // Archive JAR files
+                junit '**/target/surefire-reports/TEST-*.xml'
+                archiveArtifacts 'target/*.jar'
             }
         }
 
-        // Uncomment and configure for Slack notifications if needed
-        // always {
-        //     slackSend (
-        //         channel: params.SlackChannel,
-        //         color: currentBuild.currentResult == 'SUCCESS' ? 'good' : 'danger',
-        //         tokenCredentialId: params.SlackTokenCredentialId,
-        //         message: "Pipeline Status: ${currentBuild.currentResult} - ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${env.BUILD_URL}"
-        //     )
-        // }
-
         cleanup {
-            cleanWs() // Clean up workspace
+            cleanWs()
         }
     }
 }
