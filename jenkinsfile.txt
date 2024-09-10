@@ -79,4 +79,44 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
-                        // Stop and remove existing contai
+                        // Stop and remove existing container if it exists
+                        sh """
+                        docker ps -q --filter "name=petclinic" | grep -q . && \
+                        docker stop petclinic && \
+                        docker rm petclinic || true
+                        """
+
+                        // Pull the Docker image and run the container
+                        sh """
+                        docker pull ${registry}:${dockerTag}
+                        docker run -d -p 8081:8081 --name petclinic ${registry}:${dockerTag}
+                        """
+                    }
+                }
+            }
+        }
+    } // <-- This closing brace was missing, fixed now
+
+    post {
+        success {
+            dir('petclinic-app') {
+                junit '**/target/surefire-reports/TEST-*.xml' // Archive JUnit test results
+                archiveArtifacts 'target/*.jar' // Archive JAR files
+            }
+        }
+
+        // Uncomment and configure for Slack notifications if needed
+        // always {
+        //     slackSend (
+        //         channel: params.SlackChannel,
+        //         color: currentBuild.currentResult == 'SUCCESS' ? 'good' : 'danger',
+        //         tokenCredentialId: params.SlackTokenCredentialId,
+        //         message: "Pipeline Status: ${currentBuild.currentResult} - ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${env.BUILD_URL}"
+        //     )
+        // }
+
+        cleanup {
+            cleanWs() // Clean up workspace
+        }
+    }
+}
