@@ -1,0 +1,123 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'ProjectKey', defaultValue: 'petclinic', description: 'SonarQube project key')
+        string(name: 'ProjectName', defaultValue: 'petclinic', description: 'SonarQube project name')
+        string(name: 'SonarHostUrl', defaultValue: 'http://192.168.201.13:9000', description: 'SonarQube server URL')
+        //string(name: 'SlackChannel', defaultValue: '#jenkins-build-sonar', description: 'Slack channel to send notifications')
+        //string(name: 'SlackTokenCredentialId', defaultValue: 'SLACK-TOKEN', description: 'Slack token credential ID')
+        string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/noaadevops/pipeline.git', description: 'Git repository URL')
+        string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch name')
+    }
+
+    environment {
+        registry = "noaalinux/petclinic-java" // Docker image name
+        registryCredential = 'Jenkins-Docker-Token' // Jenkins credential ID for DockerHub
+        dockerTag = "${env.BUILD_NUMBER}" // Use build number as Docker tag
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout([$class: 'GitSCM', 
+                          branches: [[name: '*/main']],
+                          userRemoteConfigs: [[url: 'https://github.com/Noah-linux/ci.git']],
+                          extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'ci']]])
+            }
+        stage('Checkout GitHub Repo') {
+            steps {
+                script {
+                    git branch: "${params.GIT_BRANCH}", url: "${params.GIT_REPO_URL}"
+                }
+            }
+        }
+
+        stage('Compile Code') {
+            steps {
+                dir('petclinic-app') {
+                    sh 'mvn compile' // Compile the code
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                dir('petclinic-app') {
+                    sh 'mvn test' // Run the tests
+                }
+            }
+        }
+
+        stage('Build Package') {
+            steps {
+                dir('petclinic-app') {
+                    sh 'mvn -Dmaven.test.failure.ignore=true clean package' // Build the package
+                }
+            }
+        }
+
+        stage('Sonar Static Code Analysis') {
+            steps {
+                dir('petclinic-app') {
+                    withCredentials([string(credentialsId: 'jenkins-sonar-token', variable: 'sonar_token')]) {
+                        sh """
+                        mvn sonar:sonar \
+                            -Dsonar.projectKey=${params.ProjectKey} \
+                            -Dsonar.projectName=${params.ProjectName} \
+                            -Dsonar.host.url=${params.SonarHostUrl} \
+                            -Dsonar.login=${sonar_token}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Docker Pull & Deploy') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
+                        // Stop and remove existing container if it exists
+                        sh """
+                        docker ps -q --filter "name=petclinic" | grep -q . && \
+                        docker stop petclinic && \
+                        docker rm petclinic || true
+                        """
+
+                        // Pull the Docker image and run the container
+                        sh """
+                        docker pull ${registry}:${dockerTag}
+                        docker run -d -p 8081:8081 --name petclinic ${registry}:${dockerTag}
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            dir('petclinic-app') {
+                junit '**/target/surefire-reports/TEST-*.xml' // Archive JUnit test results
+                archiveArtifacts 'target/*.jar' // Archive JAR files
+            }
+        }
+
+        // Uncomment and configure for Slack notifications if needed
+        // always {
+        //     slackSend (
+        //         channel: params.SlackChannel,
+        //         color: currentBuild.currentResult == 'SUCCESS' ? 'good' : 'danger',
+        //         tokenCredentialId: params.SlackTokenCredentialId,
+        //         message: "Pipeline Status: ${currentBuild.currentResult} - ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${env.BUILD_URL}"
+        //     )
+        // }
+
+        cleanup {
+            cleanWs() // Clean up workspace
+        }
+    }
+}
+
+
