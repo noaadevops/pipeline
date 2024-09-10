@@ -75,22 +75,12 @@ pipeline {
             }
         }
 
-        stage('Docker Pull & Deploy') {
+        stage('Build Docker Image') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
-                        // Stop and remove existing container if it exists
-                        sh """
-                        docker ps -q --filter "name=petclinic" | grep -q . && \
-                        docker stop petclinic && \
-                        docker rm petclinic || true
-                        """
-
-                        // Pull the Docker image and run the container
-                        sh """
-                        docker pull ${registry}:${dockerTag}
-                        docker run -d -p 8081:8081 --name petclinic ${registry}:${dockerTag}
-                        """
+                dir('petclinic-app') {
+                    script {
+                        echo "Building Docker image: ${registry}:${dockerTag}"
+                        dockerImage = docker.build("${registry}:${dockerTag}") // Build the Docker image with the build number as the tag
                     }
                 }
             }
