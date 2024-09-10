@@ -20,9 +20,10 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                // NEW UPDATE: Updated checkout configuration with correct URL and added credentials
                 checkout([$class: 'GitSCM', 
                           branches: [[name: '*/main']],
-                          userRemoteConfigs: [[url: 'https://github.com/Noah-linux/ci.git']],
+                          userRemoteConfigs: [[url: 'https://github.com/Noah-linux/ci.git', credentialsId: 'Git-pass']], // NEW UPDATE
                           extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'ci']]])
             }
         }
@@ -30,7 +31,8 @@ pipeline {
         stage('Checkout GitHub Repo') {
             steps {
                 script {
-                    git branch: "${params.GIT_BRANCH}", url: "${params.GIT_REPO_URL}"
+                    // NEW UPDATE: Added credentialsId for GitHub access
+                    git branch: "${params.GIT_BRANCH}", url: "${params.GIT_REPO_URL}", credentialsId: 'Git-pass' // NEW UPDATE
                 }
             }
         }
@@ -95,7 +97,7 @@ pipeline {
                 }
             }
         }
-    } // <-- This closing brace was missing
+    } // <-- This closing brace was missing, fixed now
 
     post {
         success {
