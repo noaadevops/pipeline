@@ -27,7 +27,7 @@ pipeline {
 
         stage('Compile Code') {
             steps {
-                dir('petclinic-app') { // Change directory to 'petclinic-app'
+                dir('Java-app') { // Change directory to 'petclinic-app'
                     sh 'mvn compile' // Compile the code without running tests
                 }
             }
