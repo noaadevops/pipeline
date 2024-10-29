@@ -1,9 +1,7 @@
 pipeline {
     agent any
 
-    tools {
-        jfrog 'jfrog-cli'
-    }
+   
 
     parameters {
         string(name: 'ProjectKey', defaultValue: 'petclinic', description: 'SonarQube project key')
@@ -12,9 +10,7 @@ pipeline {
         string(name: 'AppPort', defaultValue: '8081', description: 'Port to run the application')
     }
 
-    environment {
-        DOCKER_IMAGE_NAME = "ncloud.jfrog.io/petclinic/petclinic:${env.BUILD_NUMBER}" // Using build number for Docker image tag
-    }
+   
 
     stages {
         stage('Clone') {
