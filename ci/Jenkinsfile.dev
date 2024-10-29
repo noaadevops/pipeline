@@ -21,7 +21,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git branch: 'master', url: "https://github.com/noaadevops/docker-lab.git"
+                git branch: 'master', url: "https://github.com/noaadevops/pipeline.git"
             }
         }
 
@@ -99,6 +99,23 @@ pipeline {
             }
         }
     }
+
+ stage('Deploy QA | PROD') {
+            when {
+                expression { params.DeployEnvironment == 'QA' || params.DeployEnvironment == 'Production' }
+            }
+            steps {
+                script {
+                    def playbook = params.DeployEnvironment == 'QA' ? 'ansible/deployer/deployer_qa.yml' : 'ansible/deployer/deployer_prod.yml'
+
+                    sh """
+                    ansible-playbook -i ansible/deployer/inventory.ini ${playbook} \
+                    --extra-vars "JFrogURL=${params.JFrogURL} DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME} AppPort=${params.AppPort}" \
+                    --vault-password-file ansible/deployer/vault_password.txt
+                    """
+                }
+            }
+        }
 
     post {
         success {
