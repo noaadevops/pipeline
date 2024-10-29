@@ -38,7 +38,7 @@ pipeline {
 
         stage('Build Package') {
             steps {
-                dir('petclinic-app') { // Change directory to 'petclinic-app'
+                dir('Java-app') { // Change directory to 'petclinic-app'
                     sh 'mvn clean install -DskipTests=true' // Build the package without running tests
                 }
             }
